@@ -5,6 +5,7 @@ plugins {
     kotlin("multiplatform")
     id("com.android.library")
     id("com.vanniktech.maven.publish.base")
+    kotlin("plugin.serialization").version(Versions.Kotlin.lang)
 }
 
 kotlin {
@@ -26,7 +27,13 @@ kotlin {
                 implementation("io.ktor:ktor-server-websockets:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-core:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-cio:${Versions.ktor}")
-                api("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.Kotlin.serialization}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.Kotlin.serialization}")
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
             }
         }
 
@@ -34,6 +41,7 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-okhttp:${Versions.ktor}")
+                implementation ("org.bouncycastle:bcprov-jdk15to18:1.68")
             }
         }
         val darwinMain by creating {
