@@ -1,11 +1,16 @@
 package com.mimao.kmp.walletconnect.entity
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class WCPeerMeta(
-    val name: String,
-    val url: String,
+    @SerialName("description")
     val description: String? = null,
-    val icons: List<String> = listOf("")
+    @SerialName("icons")
+    val icons: List<String?>? = null,
+    @SerialName("name")
+    val name: String? = null,
+    @SerialName("url")
+    val url: String? = null
 )
