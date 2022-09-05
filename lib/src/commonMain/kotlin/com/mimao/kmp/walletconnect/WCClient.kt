@@ -17,7 +17,15 @@ class WCClient(
     coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
     private val scope = CoroutineScope(coroutineContext)
-    private val _connections = MutableStateFlow<MutableMap<String, Pair<WCConnection, WCSession>>>(ConcurrentMap())
+    private val _connectionMap = ConcurrentMap<String, Pair<WCConnection, WCSession>>()
+    private val _connections = MutableSharedFlow<MutableMap<String, Pair<WCConnection, WCSession>>>(replay = 1)
+        .apply { tryEmit(_connectionMap) }
+
+    private suspend fun MutableSharedFlow<MutableMap<String, Pair<WCConnection, WCSession>>>.update(block: suspend (MutableMap<String, Pair<WCConnection, WCSession>>) -> Unit) {
+        block(_connectionMap)
+        tryEmit(_connectionMap)
+    }
+
     val message: Flow<WCMessage> by lazy {
         _connections.flatMapLatest { connections ->
             merge(
@@ -32,14 +40,14 @@ class WCClient(
             )
         }
     }
-    val connections: Flow<List<WCConnection>>
-        get() = _connections.map {
-            it.values.map { pair ->
-                pair.first
-            }.toList()
-        }
 
-    fun getConnection(connectionId: String) = _connections.value[connectionId]?.first
+    val connections = _connections.map {
+        it.values.map { pair ->
+            pair.first
+        }.toList()
+    }
+
+    fun getConnection(connectionId: String) = _connectionMap[connectionId]?.first
 
     init {
         scope.launch {
@@ -56,12 +64,14 @@ class WCClient(
         }
         scope.launch {
             store.all().forEach {
-                _connections.value[it.id] = Pair(it, WCSession(
-                    config = it.config,
-                    remotePeerId = it.peerId
-                ).apply {
-                    connectSocket(it.clientId)
-                })
+                _connections.update { map ->
+                    map[it.id] = Pair(it, WCSession(
+                        config = it.config,
+                        remotePeerId = it.peerId
+                    ).apply {
+                        connectSocket(it.clientId)
+                    })
+                }
             }
         }
     }
@@ -140,14 +150,18 @@ class WCClient(
 
     private suspend fun storeCollection(wcCollection: WCConnection, session: WCSession) {
         store.store(storeId = wcCollection.config.topic, connection = wcCollection)
-        _connections.value[wcCollection.id] = Pair(wcCollection, session)
+        _connections.update {
+            _connectionMap[wcCollection.id] = Pair(wcCollection, session)
+        }
     }
 
-    private suspend fun removeCollection(id: String):Pair<WCConnection, WCSession>? {
-        val pair = _connections.value[id]
+    private suspend fun removeCollection(id: String): Pair<WCConnection, WCSession>? {
+        val pair = _connectionMap[id]
         pair?.first?.let {
             store.remove(storeId = it.config.topic)
-            _connections.value.remove(it.id)?.second?.closeSocket()
+            _connections.update { map ->
+                map.remove(it.id)?.second?.closeSocket()
+            }
         }
         return pair
     }

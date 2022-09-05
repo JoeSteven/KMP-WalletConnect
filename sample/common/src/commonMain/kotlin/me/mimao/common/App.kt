@@ -10,10 +10,12 @@ import androidx.compose.runtime.*
 import com.mimao.kmp.walletconnect.WCClient
 import com.mimao.kmp.walletconnect.entity.WCPeerMeta
 import com.mimao.kmp.walletconnect.entity.WCSessionConfig
+import com.mimao.kmp.walletconnect.utils.WCLogger
 import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
+    WCLogger.switch(true)
     val wcClient = remember {
         WCClient(
             store = FakeWCConnectionStore(),
@@ -42,8 +44,6 @@ fun App() {
                         )
                     ).onFailure {
                         uri = it.toString()
-                    }.onSuccess {
-                        println("connect wallet success:$it")
                     }
                 }
             }) {
@@ -60,10 +60,9 @@ fun App() {
                     Text("Disconnect")
                 }
             }
-
         }
-        println("textUri: $uri")
         Text(uri)
+        println("$uri")
         LazyColumn {
             items(connections) {
                 Text("connected:$it")

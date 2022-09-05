@@ -1,5 +1,6 @@
 package com.mimao.kmp.walletconnect.websocket
 
+import com.mimao.kmp.walletconnect.utils.WCLogger
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
@@ -11,11 +12,11 @@ internal class KtorSocket(
     private val serverUrl: String,
     private val client: HttpClient = httpClient(),
 ) {
-    val recieve = MutableSharedFlow<String>()
-    val connected = MutableStateFlow(false)
+    internal val receive = MutableSharedFlow<String>()
+    internal val connected = MutableStateFlow(false)
     private val sendFlow = MutableSharedFlow<String>(replay = 1)
-    private var sendRoutine:Job? = null
-    private var rvRoutine:Job? = null
+    private var sendRoutine: Job? = null
+    private var rvRoutine: Job? = null
     private val scope = CoroutineScope(Dispatchers.Default)
 
     suspend fun connect() {
@@ -26,12 +27,12 @@ internal class KtorSocket(
                 rvRoutine = launch { receiveMessage() }
                 sendRoutine = launch { sendMessage() }
                 connected.value = true
-                println("connected")
+                WCLogger.log("websocket connected:$serverUrl")
                 sendRoutine?.join()
                 rvRoutine?.cancelAndJoin()
             }
         }
-        while (!connected.value){
+        while (!connected.value) {
             delay(100)
         }
     }
@@ -43,9 +44,7 @@ internal class KtorSocket(
                 FrameType.PING -> send(Frame.Pong(data = byteArrayOf(1)))
                 else -> {
                     if (frame is Frame.Text) {
-                        recieve.emit(frame.readText()).also {
-                            println("frame: $frame emit:$it")
-                        }
+                        receive.emit(frame.readText())
                     }
                 }
             }
@@ -54,21 +53,18 @@ internal class KtorSocket(
 
     private suspend fun DefaultClientWebSocketSession.sendMessage() {
         sendFlow.collect {
-            println("send: $it")
             send(it)
         }
     }
 
 
     fun close() {
-        println("close socket")
         connected.value = false
         rvRoutine?.cancel()
+        WCLogger.log("websocket closed:$serverUrl")
     }
 
     fun send(message: String) {
-        sendFlow.tryEmit(message).also {
-            println("try send: $message $it")
-        }
+        sendFlow.tryEmit(message)
     }
 }

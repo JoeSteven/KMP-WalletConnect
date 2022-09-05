@@ -25,11 +25,6 @@ internal data class JsonRpcResponse<T>(
     val result: T?
 )
 
-internal data class JsonRpcErrorResponse(
-    val jsonrpc: String = JSONRPC_VERSION,
-    val id: Long,
-    val error: JsonRpcError
-)
 
 internal data class JsonRpcError(
     val code: Int,

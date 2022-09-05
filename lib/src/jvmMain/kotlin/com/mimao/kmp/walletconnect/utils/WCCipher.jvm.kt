@@ -11,12 +11,11 @@ import org.bouncycastle.crypto.paddings.PKCS7Padding
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
 import org.bouncycastle.crypto.params.KeyParameter
 import org.bouncycastle.crypto.params.ParametersWithIV
-import java.net.URLEncoder
 import java.security.SecureRandom
 
 internal actual object WCCipher {
     actual fun decrypt(payload: String, key: String): String{
-        val payload = JSON.decodeFromString(WCEncryptedPayload.serializer(), payload)
+        val payloadObj = JSON.decodeFromString(WCEncryptedPayload.serializer(), payload)
         val padding = PKCS7Padding()
         val aes = PaddedBufferedBlockCipher(
             CBCBlockCipher(AESEngine()),
@@ -24,11 +23,11 @@ internal actual object WCCipher {
         )
         val ivAndKey = ParametersWithIV(
             KeyParameter(key.decodeHex().toByteArray()),
-            payload.iv.decodeHex().toByteArray()
+            payloadObj.iv.decodeHex().toByteArray()
         )
         aes.init(false, ivAndKey)
 
-        val encryptedData = payload.data.decodeHex().toByteArray()
+        val encryptedData = payloadObj.data.decodeHex().toByteArray()
         val minSize = aes.getOutputSize(encryptedData.size)
         val outBuf = ByteArray(minSize)
         var len = aes.processBytes(encryptedData, 0, encryptedData.size, outBuf, 0)
@@ -37,8 +36,6 @@ internal actual object WCCipher {
     }
 
     actual fun encrypt(payload: String, key: String): WCEncryptedPayload {
-        println("payload:$payload")
-        println("key:$key")
         val payloadBytes = payload.toByteArray()
         val hexKey = key.decodeHex().toByteArray()
         val iv = createRandomBytes(16)

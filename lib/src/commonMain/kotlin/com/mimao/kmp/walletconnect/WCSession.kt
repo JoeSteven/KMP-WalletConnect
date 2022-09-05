@@ -3,14 +3,13 @@ package com.mimao.kmp.walletconnect
 import com.mimao.kmp.walletconnect.entity.*
 import com.mimao.kmp.walletconnect.entity.SocketMessage
 import com.mimao.kmp.walletconnect.entity.WCMethod
+import com.mimao.kmp.walletconnect.utils.*
 import com.mimao.kmp.walletconnect.utils.JSON
 import com.mimao.kmp.walletconnect.utils.WCCipher
 import com.mimao.kmp.walletconnect.utils.decodeJson
 import com.mimao.kmp.walletconnect.utils.encodeJson
 import com.mimao.kmp.walletconnect.websocket.KtorSocket
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 
 internal class WCSession(
@@ -27,14 +26,15 @@ internal class WCSession(
     }
 
     val message: Flow<WCMethod> by lazy {
-        socket.recieve.mapNotNull {
-            handleMessage(JSON.decodeFromString(SocketMessage.serializer(), it))
+        socket.receive.mapNotNull {
+            handleMessage(JSON.decodeFromString(SocketMessage.serializer(), it)).also {
+                WCLogger.log("onReceive:$it")
+            }
         }
     }
 
     suspend fun connectSocket(clientId: String) {
         socket.connect()
-        println("socket connected:${socket.connected.value}")
         socket.send(
             SocketMessage(
                 topic = clientId,
@@ -82,9 +82,9 @@ internal class WCSession(
 
             is WCMethod.Error -> return method
         }
+        WCLogger.log("send:$payload")
         val encryptedPayload = WCCipher.encrypt(payload = payload, key = key)
         val result = message.filter {
-            println("request:$method, response:$it")
             it.requestId == method.requestId
         }
         socket.send(
@@ -98,7 +98,6 @@ internal class WCSession(
     }
 
     private fun handleMessage(socketMessage: SocketMessage): WCMethod? {
-        println("handle socket message:$socketMessage")
         if (socketMessage.type != SocketMessage.Type.Pub) return null
         return decrypt(socketMessage.payload)
     }
