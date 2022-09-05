@@ -38,18 +38,18 @@ enum class WCMethodType(val value: String) {
 }
 
 sealed class WCMethod(val requestId: Long) {
-   data class Request(
+    data class Request(
         val id: Long,
         val type: WCMethodType,
-        val params:List<Params>,
-    ): WCMethod(id) {
-        sealed interface Params{
+        val params: List<Params>,
+    ) : WCMethod(id) {
+        sealed interface Params {
             @Serializable
             data class Request(
                 val chainId: Long? = null,
                 val peerId: String,
                 val peerMeta: WCPeerMeta? = null
-            ):Params
+            ) : Params
 
             @Serializable
             data class Update(
@@ -63,7 +63,7 @@ sealed class WCMethod(val requestId: Long) {
     data class Response(
         val id: Long,
         val result: Any
-    ):WCMethod(requestId = id) {
+    ) : WCMethod(requestId = id) {
         @Serializable
         data class RequestResponse(
             val peerId: String,
@@ -78,11 +78,12 @@ sealed class WCMethod(val requestId: Long) {
     data class CustomRequest(
         val id: Long,
         val method: String,
-        val params:JsonArray,
-    ): WCMethod(requestId = id)
+        val params: JsonArray,
+    ) : WCMethod(requestId = id)
 
     data class Error(
         val id: Long,
-        val error: String
-    ):WCMethod(requestId = id)
+        val error: String,
+        val code: Long,
+    ) : WCMethod(requestId = id)
 }

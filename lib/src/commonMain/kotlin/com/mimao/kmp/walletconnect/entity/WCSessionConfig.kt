@@ -18,7 +18,7 @@ data class WCSessionConfig(
     val uri = "wc:$topic@$version?bridge=${bridge.toUrlEncode()}&key=$key"
 
     companion object {
-        fun fromUri(uri: String):WCSessionConfig? {
+        fun fromUri(uri: String): WCSessionConfig? {
             if (!uri.startsWith("wc:")) return null
 
             val uriString = uri.replace("wc:", "wc://")

@@ -1,81 +1,29 @@
 package com.mimao.kmp.walletconnect
 
+import com.mimao.kmp.walletconnect.core.WCCollectionsManager
+import com.mimao.kmp.walletconnect.core.WCSession
 import com.mimao.kmp.walletconnect.entity.*
 import com.mimao.kmp.walletconnect.utils.UUID
-import io.ktor.util.collections.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlinx.serialization.json.JsonArray
 import kotlin.coroutines.CoroutineContext
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class WCClient(
-    private val store: WCConnectionPersistStore,
+    store: WCConnectionPersistStore,
     coroutineContext: CoroutineContext = Dispatchers.Default
 ) {
-    private val scope = CoroutineScope(coroutineContext)
-    private val _connectionMap = ConcurrentMap<String, Pair<WCConnection, WCSession>>()
-    private val _connections = MutableSharedFlow<MutableMap<String, Pair<WCConnection, WCSession>>>(replay = 1)
-        .apply { tryEmit(_connectionMap) }
 
-    private suspend fun MutableSharedFlow<MutableMap<String, Pair<WCConnection, WCSession>>>.update(block: suspend (MutableMap<String, Pair<WCConnection, WCSession>>) -> Unit) {
-        block(_connectionMap)
-        tryEmit(_connectionMap)
+    private val manager by lazy {
+        WCCollectionsManager(
+            store = store,
+            coroutineContext = coroutineContext
+        )
     }
 
-    val message: Flow<WCMessage> by lazy {
-        _connections.flatMapLatest { connections ->
-            merge(
-                *connections.values.map {
-                    it.second.message.map { method ->
-                        WCMessage(
-                            connectionId = it.first.id,
-                            method = method
-                        )
-                    }
-                }.toTypedArray()
-            )
-        }
-    }
+    val connections = manager.connections
 
-    val connections = _connections.map {
-        it.values.map { pair ->
-            pair.first
-        }.toList()
-    }
-
-    fun getConnection(connectionId: String) = _connectionMap[connectionId]?.first
-
-    init {
-        scope.launch {
-            message.collect {
-                if (it.method is WCMethod.Request) {
-                    val update = it.method.params.firstOrNull()
-                    if (update is WCMethod.Request.Params.Update) {
-                        if (!update.approved) {
-                            removeCollection(it.connectionId)
-                        }
-                    }
-                }
-            }
-        }
-        scope.launch {
-            store.all().forEach {
-                _connections.update { map ->
-                    map[it.id] = Pair(it, WCSession(
-                        config = it.config,
-                        remotePeerId = it.peerId
-                    ).apply {
-                        connectSocket(it.clientId)
-                    })
-                }
-            }
-        }
-    }
-
+    fun getConnection(connectionId: String) = manager.getConnection(connectionId)
 
     suspend fun connect(
         config: WCSessionConfig,
@@ -85,7 +33,7 @@ class WCClient(
         val session = WCSession(
             config = config,
         )
-        val requestId = createCallId()
+        val requestId = manager.createCallId()
         val clientId = UUID.randomUUID()
         session.connectSocket(clientId = clientId)
         return session.send(
@@ -114,7 +62,7 @@ class WCClient(
                         peerId = result.peerId,
                         clientMeta = clientMeta
                     ).also {
-                        storeCollection(
+                        manager.storeCollection(
                             wcCollection = it,
                             session = session
                         )
@@ -126,43 +74,22 @@ class WCClient(
         }
     }
 
-    suspend fun disconnect(
-        connectionId: String
-    ) {
-        removeCollection(connectionId)?.let {
-            it.second.send(
-                WCMethod.Request(
-                    id = createCallId(),
-                    type = WCMethodType.SESSION_UPDATE,
-                    params = listOf(
-                        WCMethod.Request.Params.Update(
-                            approved = false,
-                            chainId = it.first.chainId,
-                            accounts = it.first.accounts,
-                        )
-                    )
+    suspend fun disconnect(connectionId: String) = manager.disconnect(connectionId)
+
+    suspend fun request(
+        connectionId: String,
+        method: String,
+        params: JsonArray
+    ):Result<WCMethod> {
+        return runCatching {
+            manager.getSession(connectionId)?.send(
+                method = WCMethod.CustomRequest(
+                    id = manager.createCallId(),
+                    method = method,
+                    params = params
                 )
-            )
+            ) ?: throw Error("Can't find any connections with id:$connectionId")
         }
     }
 
-    private fun createCallId() = Clock.System.now().toEpochMilliseconds()
-
-    private suspend fun storeCollection(wcCollection: WCConnection, session: WCSession) {
-        store.store(storeId = wcCollection.config.topic, connection = wcCollection)
-        _connections.update {
-            _connectionMap[wcCollection.id] = Pair(wcCollection, session)
-        }
-    }
-
-    private suspend fun removeCollection(id: String): Pair<WCConnection, WCSession>? {
-        val pair = _connectionMap[id]
-        pair?.first?.let {
-            store.remove(storeId = it.config.topic)
-            _connections.update { map ->
-                map.remove(it.id)?.second?.closeSocket()
-            }
-        }
-        return pair
-    }
 }

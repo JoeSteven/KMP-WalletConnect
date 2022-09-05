@@ -62,7 +62,7 @@ fun App() {
             }
         }
         Text(uri)
-        println("$uri")
+        println(uri)
         LazyColumn {
             items(connections) {
                 Text("connected:$it")

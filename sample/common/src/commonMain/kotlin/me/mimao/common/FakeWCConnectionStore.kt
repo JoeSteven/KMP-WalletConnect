@@ -4,7 +4,7 @@ import com.mimao.kmp.walletconnect.WCConnectionPersistStore
 import com.mimao.kmp.walletconnect.entity.WCConnection
 import io.ktor.util.collections.*
 
-class FakeWCConnectionStore: WCConnectionPersistStore {
+class FakeWCConnectionStore : WCConnectionPersistStore {
     private val store = ConcurrentMap<String, WCConnection>()
     override suspend fun store(storeId: String, connection: WCConnection) {
         store[storeId] = connection

@@ -27,6 +27,7 @@ kotlin {
                 implementation("io.ktor:ktor-server-websockets:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-core:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-cio:${Versions.ktor}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.Kotlin.serialization}")
             }
         }
 

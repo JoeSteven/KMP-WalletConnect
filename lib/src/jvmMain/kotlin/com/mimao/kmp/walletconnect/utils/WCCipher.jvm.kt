@@ -14,14 +14,14 @@ import org.bouncycastle.crypto.params.ParametersWithIV
 import java.security.SecureRandom
 
 internal actual object WCCipher {
-    actual fun decrypt(payload: String, key: String): String{
+    actual fun decrypt(payload: String, key: String): String {
         val payloadObj = JSON.decodeFromString(WCEncryptedPayload.serializer(), payload)
         val hmac = calculateHmac(
             data = payloadObj.data.decodeHex().toByteArray(),
             key = key.decodeHex().toByteArray(),
             iv = payloadObj.iv.decodeHex().toByteArray()
         )
-        if ( hmac != payloadObj.hmac) {
+        if (hmac != payloadObj.hmac) {
             throw Error("calculated hmac:$hmac is not equals to hmac:${payloadObj.hmac}")
         }
 
@@ -75,7 +75,7 @@ internal actual object WCCipher {
 
     private fun createRandomBytes(i: Int) = ByteArray(i).also { SecureRandom().nextBytes(it) }
 
-    private fun calculateHmac(data: ByteArray, key: ByteArray, iv:ByteArray): String {
+    private fun calculateHmac(data: ByteArray, key: ByteArray, iv: ByteArray): String {
         val hmac = HMac(SHA256Digest())
         hmac.init(KeyParameter(key))
 

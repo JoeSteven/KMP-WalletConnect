@@ -1,4 +1,4 @@
-package com.mimao.kmp.walletconnect
+package com.mimao.kmp.walletconnect.core
 
 import com.mimao.kmp.walletconnect.entity.*
 import com.mimao.kmp.walletconnect.entity.SocketMessage
@@ -27,9 +27,8 @@ internal class WCSession(
 
     val message: Flow<WCMethod> by lazy {
         socket.receive.mapNotNull {
-            handleMessage(JSON.decodeFromString(SocketMessage.serializer(), it)).also {
-                WCLogger.log("onReceive:$it")
-            }
+            WCLogger.log("onReceive raw:$it")
+            handleMessage(JSON.decodeFromString(SocketMessage.serializer(), it))
         }
     }
 
@@ -93,6 +92,9 @@ internal class WCSession(
                 type = SocketMessage.Type.Pub,
                 payload = encryptedPayload.encodeJson()
             ).encodeJson()
+                .also {
+                    WCLogger.log("send encrypted:$it")
+                }
         )
         return result.first()
     }
@@ -108,6 +110,17 @@ internal class WCSession(
         return try {
             val decrypted = WCCipher.decrypt(payload = payload, key = key)
                 .decodeJson<JsonElement>()
+            WCLogger.log("onReceived decrypted:$decrypted")
+            val error = decrypted.jsonObject["error"]
+            if (error != null) {
+                return JSON.decodeFromJsonElement<JsonRpcErrorResponse>(decrypted).let {
+                    WCMethod.Error(
+                        id = it.id,
+                        error = it.error.message,
+                        code = it.error.code
+                    )
+                }
+            }
             val result = decrypted.jsonObject["result"]
             requestId = decrypted.jsonObject["id"]?.jsonPrimitive?.content?.toLong() ?: return null
             if (result != null) {
@@ -155,7 +168,8 @@ internal class WCSession(
         } catch (e: Throwable) {
             WCMethod.Error(
                 id = requestId ?: return null,
-                error = e.toString()
+                error = e.toString(),
+                code = -1,
             )
         }
     }
