@@ -16,6 +16,15 @@ import java.security.SecureRandom
 internal actual object WCCipher {
     actual fun decrypt(payload: String, key: String): String{
         val payloadObj = JSON.decodeFromString(WCEncryptedPayload.serializer(), payload)
+        val hmac = calculateHmac(
+            data = payloadObj.data.decodeHex().toByteArray(),
+            key = key.decodeHex().toByteArray(),
+            iv = payloadObj.iv.decodeHex().toByteArray()
+        )
+        if ( hmac != payloadObj.hmac) {
+            throw Error("calculated hmac:$hmac is not equals to hmac:${payloadObj.hmac}")
+        }
+
         val padding = PKCS7Padding()
         val aes = PaddedBufferedBlockCipher(
             CBCBlockCipher(AESEngine()),
@@ -53,20 +62,28 @@ internal actual object WCCipher {
         aes.doFinal(outBuf, length1)
 
 
-        val hmac = HMac(SHA256Digest())
-        hmac.init(KeyParameter(hexKey))
-
-        val hmacResult = ByteArray(hmac.macSize)
-        hmac.update(outBuf, 0, outBuf.size)
-        hmac.update(iv, 0, iv.size)
-        hmac.doFinal(hmacResult, 0)
         return WCEncryptedPayload(
             data = outBuf.toByteString().hex(),
-            hmac = hmacResult.toByteString().hex(),
+            hmac = calculateHmac(
+                data = outBuf,
+                key = hexKey,
+                iv = iv
+            ),
             iv = iv.toByteString().hex()
         )
     }
 
     private fun createRandomBytes(i: Int) = ByteArray(i).also { SecureRandom().nextBytes(it) }
+
+    private fun calculateHmac(data: ByteArray, key: ByteArray, iv:ByteArray): String {
+        val hmac = HMac(SHA256Digest())
+        hmac.init(KeyParameter(key))
+
+        val hmacResult = ByteArray(hmac.macSize)
+        hmac.update(data, 0, data.size)
+        hmac.update(iv, 0, iv.size)
+        hmac.doFinal(hmacResult, 0)
+        return hmacResult.toByteString().hex()
+    }
 
 }
