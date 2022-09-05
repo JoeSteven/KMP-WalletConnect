@@ -56,7 +56,6 @@ sealed class WCMethod(val requestId: Long) {
                 val approved: Boolean,
                 val chainId: Long? = null,
                 val accounts: List<String>? = null,
-                val peerMeta: WCPeerMeta? = null
             ) : Params
         }
     }

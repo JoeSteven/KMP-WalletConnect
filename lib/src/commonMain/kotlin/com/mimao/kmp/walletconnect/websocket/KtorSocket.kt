@@ -7,41 +7,45 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-class KtorSocket(
+internal class KtorSocket(
     private val serverUrl: String,
     private val client: HttpClient = httpClient(),
 ) {
-    val recieve = MutableSharedFlow<String>(1)
+    val recieve = MutableSharedFlow<String>()
     val connected = MutableStateFlow(false)
     private val sendFlow = MutableSharedFlow<String>(replay = 1)
     private var sendRoutine:Job? = null
     private var rvRoutine:Job? = null
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     suspend fun connect() {
-        withContext(Dispatchers.Default) {
+        scope.launch {
             client.webSocket(
                 serverUrl.replace("https://", "wss://").replace("http://", "ws://"),
             ) {
-                println("connected")
-                connected.value = true
                 rvRoutine = launch { receiveMessage() }
                 sendRoutine = launch { sendMessage() }
+                connected.value = true
+                println("connected")
                 sendRoutine?.join()
                 rvRoutine?.cancelAndJoin()
             }
         }
-
+        while (!connected.value){
+            delay(100)
+        }
     }
 
     private suspend fun DefaultClientWebSocketSession.receiveMessage() {
         for (frame in incoming) {
-            println("frame: $frame")
             when (frame.frameType) {
                 FrameType.CLOSE -> connected.value = false
                 FrameType.PING -> send(Frame.Pong(data = byteArrayOf(1)))
                 else -> {
                     if (frame is Frame.Text) {
-                        recieve.tryEmit(frame.readText())
+                        recieve.emit(frame.readText()).also {
+                            println("frame: $frame emit:$it")
+                        }
                     }
                 }
             }
@@ -49,7 +53,6 @@ class KtorSocket(
     }
 
     private suspend fun DefaultClientWebSocketSession.sendMessage() {
-        println("collect send msg")
         sendFlow.collect {
             println("send: $it")
             send(it)

@@ -1,15 +1,21 @@
 package com.mimao.kmp.walletconnect.entity
 
+import com.mimao.kmp.walletconnect.utils.UUID
+import com.mimao.kmp.walletconnect.utils.hex
+import com.mimao.kmp.walletconnect.utils.toUrlEncode
 import io.ktor.http.*
+import kotlinx.serialization.Serializable
+import kotlin.random.Random
 
+@Serializable
 data class WCSessionConfig(
-    val topic: String,
     val bridge: String,
-    val key: String,
+    val topic: String = UUID.randomUUID(),
+    val key: String = ByteArray(32).also { Random.nextBytes(it) }.hex(),
     val protocol: String = "wc",
     val version: Int = 1
 ) {
-    val uri = "wc:$topic@$version?bridge=${Url(bridge)}&key=$key"
+    val uri = "wc:$topic@$version?bridge=${bridge.toUrlEncode()}&key=$key"
 
     companion object {
         fun fromUri(uri: String):WCSessionConfig? {

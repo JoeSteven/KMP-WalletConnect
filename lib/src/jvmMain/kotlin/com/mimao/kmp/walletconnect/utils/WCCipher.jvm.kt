@@ -11,6 +11,7 @@ import org.bouncycastle.crypto.paddings.PKCS7Padding
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
 import org.bouncycastle.crypto.params.KeyParameter
 import org.bouncycastle.crypto.params.ParametersWithIV
+import java.net.URLEncoder
 import java.security.SecureRandom
 
 internal actual object WCCipher {
@@ -36,6 +37,8 @@ internal actual object WCCipher {
     }
 
     actual fun encrypt(payload: String, key: String): WCEncryptedPayload {
+        println("payload:$payload")
+        println("key:$key")
         val payloadBytes = payload.toByteArray()
         val hexKey = key.decodeHex().toByteArray()
         val iv = createRandomBytes(16)

@@ -1,39 +1,74 @@
 package me.mimao.common
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material.Text
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import com.mimao.kmp.walletconnect.websocket.KtorSocket
+import com.mimao.kmp.walletconnect.WCClient
+import com.mimao.kmp.walletconnect.entity.WCPeerMeta
+import com.mimao.kmp.walletconnect.entity.WCSessionConfig
 import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
-    val socket = remember {
-        KtorSocket(serverUrl = "wss://demo.piesocket.com/v3/channel_1?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self")
+    val wcClient = remember {
+        WCClient(
+            store = FakeWCConnectionStore(),
+        )
     }
     val scope = rememberCoroutineScope()
-    val response by socket.recieve.collectAsState("text")
-    val connected by socket.connected.collectAsState(false)
+    val connections by wcClient.connections.collectAsState(emptyList())
+    var uri by remember {
+        mutableStateOf("")
+    }
     Column {
-        Button(onClick = {
-            if (connected){
-                socket.close()
-            } else  {
+        Row {
+            Button(onClick = {
                 scope.launch {
-                    socket.connect()
+                    wcClient.connect(
+                        config = WCSessionConfig(
+                            bridge = "https://safe-walletconnect.gnosis.io",
+                        ).also {
+                            uri = it.uri
+                        },
+                        clientMeta = WCPeerMeta(
+                            name = "Kmp client",
+                            description = "a walletconnect client for kotlin multiplatform",
+                            icons = listOf("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXXHZPK4DZ_rjlDqj5l3SwjWZ5zD3bmte9pQ&usqp=CAU"),
+                            url = "https://github.com/JoeSteven/KMP-WalletConnect"
+                        )
+                    ).onFailure {
+                        uri = it.toString()
+                    }.onSuccess {
+                        println("connect wallet success:$it")
+                    }
+                }
+            }) {
+                Text("Connect new session")
+            }
+            if (connections.isNotEmpty()) {
+                Button(onClick = {
+                    scope.launch {
+                        wcClient.disconnect(
+                            connections.last().id
+                        )
+                    }
+                }) {
+                    Text("Disconnect")
                 }
             }
 
-        }) {
-            Text(if (connected) "Disconnect" else "Connect")
         }
-        Button(onClick = {
-            socket.send("Tested Miao!")
-        }) {
-            Text("send")
+        println("textUri: $uri")
+        Text(uri)
+        LazyColumn {
+            items(connections) {
+                Text("connected:$it")
+            }
         }
-        Text(response)
     }
 
 }

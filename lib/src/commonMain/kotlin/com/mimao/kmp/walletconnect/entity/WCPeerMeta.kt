@@ -8,7 +8,7 @@ data class WCPeerMeta(
     @SerialName("description")
     val description: String? = null,
     @SerialName("icons")
-    val icons: List<String?>? = null,
+    val icons: List<String>? = null,
     @SerialName("name")
     val name: String? = null,
     @SerialName("url")
