@@ -9,20 +9,38 @@ import com.mimao.kmp.walletconnect.utils.WCCipher
 import com.mimao.kmp.walletconnect.utils.decodeJson
 import com.mimao.kmp.walletconnect.utils.encodeJson
 import com.mimao.kmp.walletconnect.websocket.KtorSocket
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 
 internal class WCSession(
     val config: WCSessionConfig,
-    remotePeerId: String? = null,
+    private val clientId: String,
+    private var remotePeerId: String? = null
 ) {
-    private var remotePeerId: String? = remotePeerId
+    private val scope = CoroutineScope(Dispatchers.Default)
+
     private val key: String by lazy {
         config.key
     }
 
-    private val socket: KtorSocket by lazy {
-        KtorSocket(serverUrl = config.bridge)
+    private lateinit var socket: KtorSocket
+    private var isSocketConnected: Boolean = false
+    private var isSessionEnd = false
+    private var statusJob: Job? = null
+
+    init {
+        resetSocket()
+    }
+
+    private fun resetSocket() {
+        statusJob?.cancel()
+        socket = KtorSocket(serverUrl = config.bridge)
+        statusJob = scope.launch {
+            socket.status.collect {
+                isSocketConnected = it is KtorSocket.Status.Connected
+            }
+        }
     }
 
     val message: Flow<WCMethod> by lazy {
@@ -32,24 +50,44 @@ internal class WCSession(
         }
     }
 
-    suspend fun connectSocket(clientId: String) {
+    suspend fun connectSocket() {
+        if (socket.status.value !is KtorSocket.Status.Idle) resetSocket()
         socket.connect()
-        socket.send(
-            SocketMessage(
-                topic = clientId,
-                type = SocketMessage.Type.Sub,
-                payload = ""
-            ).encodeJson()
-        )
+        while (socket.status.value is KtorSocket.Status.Idle) {
+            delay(100)
+        }
+        val status = socket.status.value
+        if (status is KtorSocket.Status.Connected) {
+            isSocketConnected = true
+            socket.send(
+                SocketMessage(
+                    topic = clientId,
+                    type = SocketMessage.Type.Sub,
+                    payload = ""
+                ).encodeJson()
+            )
+        } else {
+            isSocketConnected = false
+            throw if (status is KtorSocket.Status.Error) status.error else Error("WebSocket closed:${config.bridge}")
+        }
     }
 
     suspend fun closeSocket() {
         socket.close()
+        isSessionEnd = true
+        statusJob?.cancel()
     }
 
     suspend fun send(
-        method: WCMethod
+        method: WCMethod,
+        ignoreResponse: Boolean = false,
     ): WCMethod {
+        if (isSessionEnd) {
+            throw Error("Session is closed:$config")
+        }
+        if (!isSocketConnected) {
+            connectSocket()
+        }
         val payload = when (method) {
             is WCMethod.CustomRequest -> {
                 JsonRpcRequest(
@@ -96,7 +134,8 @@ internal class WCSession(
                     WCLogger.log("send encrypted:$it")
                 }
         )
-        return result.first()
+
+        return if (ignoreResponse) method else result.first()
     }
 
     private fun handleMessage(socketMessage: SocketMessage): WCMethod? {

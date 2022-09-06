@@ -43,6 +43,7 @@ fun App() {
                             url = "https://github.com/JoeSteven/KMP-WalletConnect"
                         )
                     ).onFailure {
+                        println("onFailure:$it")
                         uri = it.toString()
                     }
                 }

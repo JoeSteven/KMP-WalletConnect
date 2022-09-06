@@ -29,26 +29,30 @@ class WCClient(
         clientMeta: WCPeerMeta,
         chainId: Long? = null
     ): Result<WCConnection> {
-        val session = WCSession(
-            config = config,
-        )
-        val requestId = manager.createCallId()
-        val clientId = UUID.randomUUID()
-        session.connectSocket(clientId = clientId)
-        return session.send(
-            WCMethod.Request(
-                id = requestId,
-                type = WCMethodType.SESSION_REQUEST,
-                params = listOf(
-                    WCMethod.Request.Params.Request(
-                        chainId = chainId,
-                        peerId = clientId,
-                        peerMeta = clientMeta
+        return runCatching {
+            val requestId = manager.createCallId()
+            val clientId = UUID.randomUUID()
+            val session = WCSession(
+                config = config,
+                clientId = clientId
+            )
+            session.connectSocket()
+            session.send(
+                WCMethod.Request(
+                    id = requestId,
+                    type = WCMethodType.SESSION_REQUEST,
+                    params = listOf(
+                        WCMethod.Request.Params.Request(
+                            chainId = chainId,
+                            peerId = clientId,
+                            peerMeta = clientMeta
+                        )
                     )
                 )
-            )
-        ).let {
-            runCatching {
+            ).let {
+                if (it is WCMethod.Error) {
+                    throw Error("code:${it.code} message:${it.error}")
+                }
                 val result = (it as WCMethod.Response).result as WCMethod.Response.RequestResponse
                 if (result.approved) {
                     WCConnection(
@@ -79,7 +83,7 @@ class WCClient(
         connectionId: String,
         method: String,
         params: JsonArray
-    ):Result<WCMethod> {
+    ): Result<WCMethod> {
         return runCatching {
             manager.getSession(connectionId)?.send(
                 method = WCMethod.CustomRequest(

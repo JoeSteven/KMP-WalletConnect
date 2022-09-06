@@ -13,34 +13,41 @@ internal class KtorSocket(
     private val client: HttpClient = httpClient(),
 ) {
     internal val receive = MutableSharedFlow<String>()
-    internal val connected = MutableStateFlow(false)
+    internal val status = MutableStateFlow<Status>(Status.Idle)
     private val sendFlow = MutableSharedFlow<String>(replay = 1)
     private var sendRoutine: Job? = null
     private var rvRoutine: Job? = null
     private val scope = CoroutineScope(Dispatchers.Default)
 
+    sealed class Status {
+        object Idle : Status()
+        object Connected : Status()
+        object Closed : Status()
+        data class Error(val error: Throwable) : Status()
+    }
+
     suspend fun connect() {
-        scope.launch {
+        val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+            status.value = Status.Error(error = throwable)
+        }
+        scope.launch(exceptionHandler) {
             client.webSocket(
                 serverUrl.replace("https://", "wss://").replace("http://", "ws://"),
             ) {
                 rvRoutine = launch { receiveMessage() }
                 sendRoutine = launch { sendMessage() }
-                connected.value = true
+                status.value = Status.Connected
                 WCLogger.log("websocket connected:$serverUrl")
                 sendRoutine?.join()
                 rvRoutine?.cancelAndJoin()
             }
-        }
-        while (!connected.value) {
-            delay(100)
         }
     }
 
     private suspend fun DefaultClientWebSocketSession.receiveMessage() {
         for (frame in incoming) {
             when (frame.frameType) {
-                FrameType.CLOSE -> connected.value = false
+                FrameType.CLOSE -> status.value = Status.Closed
                 FrameType.PING -> send(Frame.Pong(data = byteArrayOf(1)))
                 else -> {
                     if (frame is Frame.Text) {
@@ -59,7 +66,7 @@ internal class KtorSocket(
 
 
     fun close() {
-        connected.value = false
+        status.value = Status.Closed
         rvRoutine?.cancel()
         WCLogger.log("websocket closed:$serverUrl")
     }

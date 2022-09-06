@@ -69,9 +69,14 @@ internal class WCCollectionsManager(
                 _connections.update { map ->
                     map[it.id] = Pair(it, WCSession(
                         config = it.config,
-                        remotePeerId = it.peerId
+                        remotePeerId = it.peerId,
+                        clientId = it.clientId
                     ).apply {
-                        connectSocket(it.clientId)
+                        try {
+                            connectSocket()
+                        } catch (e: Throwable) {
+                            e.printStackTrace()
+                        }
                     })
                 }
             }
@@ -81,9 +86,9 @@ internal class WCCollectionsManager(
     suspend fun disconnect(
         connectionId: String
     ) {
-        removeCollection(connectionId)?.let {
+        removeCollection(connectionId, beforeRemove = {
             it.second.send(
-                WCMethod.Request(
+                method = WCMethod.Request(
                     id = createCallId(),
                     type = WCMethodType.SESSION_UPDATE,
                     params = listOf(
@@ -93,9 +98,10 @@ internal class WCCollectionsManager(
                             accounts = it.first.accounts,
                         )
                     )
-                )
+                ),
+                ignoreResponse = true
             )
-        }
+        })
     }
 
     fun createCallId() = Clock.System.now().toEpochMilliseconds()
@@ -107,8 +113,14 @@ internal class WCCollectionsManager(
         }
     }
 
-    suspend fun removeCollection(id: String): Pair<WCConnection, WCSession>? {
+    suspend fun removeCollection(
+        id: String,
+        beforeRemove: suspend (Pair<WCConnection, WCSession>) -> Unit = {}
+    ): Pair<WCConnection, WCSession>? {
         val pair = _connectionMap[id]
+        pair?.let {
+            beforeRemove.invoke(it)
+        }
         pair?.first?.let {
             store.remove(storeId = it.config.topic)
             _connections.update { map ->
