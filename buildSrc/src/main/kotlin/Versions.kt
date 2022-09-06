@@ -15,5 +15,7 @@ object Versions {
         const val lang = "1.7.10"
         const val coroutines = "1.6.4"
         const val serialization = "1.4.0"
+        const val datetime="0.4.0"
     }
+    const val krypto = "3.0.1"
 }

@@ -28,7 +28,8 @@ kotlin {
                 implementation("io.ktor:ktor-client-core:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-cio:${Versions.ktor}")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.Kotlin.serialization}")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Versions.Kotlin.datetime}")
+                implementation("com.soywiz.korlibs.krypto:krypto:${Versions.krypto}")
             }
         }
 
@@ -42,7 +43,6 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-okhttp:${Versions.ktor}")
-                implementation ("org.bouncycastle:bcprov-jdk15to18:1.68")
             }
         }
         val darwinMain by creating {

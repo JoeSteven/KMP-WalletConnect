@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 
+@Serializable
 enum class WCMethodType(val value: String) {
     @SerialName("wc_sessionRequest")
     SESSION_REQUEST("wc_sessionRequest"),

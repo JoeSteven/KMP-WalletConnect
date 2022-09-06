@@ -22,11 +22,11 @@ data class WCSessionConfig(
             if (!uri.startsWith("wc:")) return null
 
             val uriString = uri.replace("wc:", "wc://")
-            val uri = Url(uriString)
-            val bridge = uri.parameters["bridge"]
-            val key = uri.parameters["key"]
-            val topic = uri.user
-            val version = uri.host.toInt()
+            val url = Url(uriString)
+            val bridge = url.parameters["bridge"]
+            val key = url.parameters["key"]
+            val topic = url.user
+            val version = url.host.toInt()
 
             if (bridge == null || key == null || topic == null) {
                 return null
