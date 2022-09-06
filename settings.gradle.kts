@@ -22,6 +22,6 @@ rootProject.name = "KMP-WalletConnect"
 include("sample:android")
 include("sample:desktop")
 include("sample:common")
-include(":lib")
+include(":kwalletconnect")
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

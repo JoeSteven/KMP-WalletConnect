@@ -5,7 +5,6 @@ import com.mimao.kmp.walletconnect.core.WCSession
 import com.mimao.kmp.walletconnect.entity.*
 import com.mimao.kmp.walletconnect.utils.UUID
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.serialization.json.JsonArray
 import kotlin.coroutines.CoroutineContext
 

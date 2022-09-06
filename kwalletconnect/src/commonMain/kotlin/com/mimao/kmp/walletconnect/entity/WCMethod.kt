@@ -44,20 +44,20 @@ sealed class WCMethod(val requestId: Long) {
         val type: WCMethodType,
         val params: List<Params>,
     ) : WCMethod(id) {
-        sealed interface Params {
+        sealed class Params {
             @Serializable
             data class Request(
                 val chainId: Long? = null,
                 val peerId: String,
                 val peerMeta: WCPeerMeta? = null
-            ) : Params
+            ) : Params()
 
             @Serializable
             data class Update(
                 val approved: Boolean,
                 val chainId: Long? = null,
                 val accounts: List<String>? = null,
-            ) : Params
+            ) : Params()
         }
     }
 

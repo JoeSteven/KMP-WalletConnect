@@ -13,7 +13,7 @@ kotlin {
     android()
     jvm("desktop") {
         compilations.all {
-            kotlinOptions.jvmTarget = "11"
+            kotlinOptions.jvmTarget = Versions.Java.jvmTarget
         }
     }
     sourceSets {
@@ -22,7 +22,7 @@ kotlin {
                 api(compose.runtime)
                 api(compose.foundation)
                 api(compose.material)
-                implementation(projects.lib)
+                implementation(projects.kwalletconnect)
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.Kotlin.coroutines}")
                 implementation("io.ktor:ktor-server-websockets:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-core:${Versions.ktor}")
