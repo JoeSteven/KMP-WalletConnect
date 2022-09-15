@@ -12,6 +12,11 @@ import com.mimao.kmp.walletconnect.entity.WCPeerMeta
 import com.mimao.kmp.walletconnect.entity.WCSessionConfig
 import com.mimao.kmp.walletconnect.utils.WCLogger
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonArray
 
 @Composable
 fun App() {
@@ -51,6 +56,22 @@ fun App() {
                 Text("Connect new session")
             }
             if (connections.isNotEmpty()) {
+                Button(onClick = {
+                    scope.launch {
+                        wcClient.request(
+                            connections.last().id,
+                            method = "personal_sign",
+                            params = Json.encodeToJsonElement(
+                                listOf(
+                                    "0x48656c6c6f2c207765623321",
+                                    connections.last().accounts.first(),
+                                )
+                            ).jsonArray
+                        )
+                    }
+                }) {
+                    Text("Sign")
+                }
                 Button(onClick = {
                     scope.launch {
                         wcClient.disconnect(

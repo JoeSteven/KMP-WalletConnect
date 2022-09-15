@@ -2,25 +2,26 @@ package com.mimao.kmp.walletconnect.entity
 
 import kotlinx.serialization.Serializable
 
-private const val JSONRPC_VERSION = "2.0"
+internal const val JSONRPC_VERSION = "2.0"
+
 @Serializable
 internal data class JsonRpcRequest<T>(
     val id: Long,
-    val jsonrpc: String = JSONRPC_VERSION,
+    val jsonrpc: String,
     val method: String?,
     val params: T
 )
 
 @Serializable
 internal data class JsonRpcResponse<T>(
-    val jsonrpc: String = JSONRPC_VERSION,
+    val jsonrpc: String,
     val id: Long,
     val result: T?
 )
 
 @Serializable
 internal data class JsonRpcErrorResponse(
-    val jsonrpc: String = JSONRPC_VERSION,
+    val jsonrpc: String,
     val id: Long,
     val error: JsonRpcError
 )

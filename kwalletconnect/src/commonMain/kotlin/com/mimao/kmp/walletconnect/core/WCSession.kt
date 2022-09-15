@@ -11,6 +11,7 @@ import com.mimao.kmp.walletconnect.utils.encodeJson
 import com.mimao.kmp.walletconnect.websocket.KtorSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 
 internal class WCSession(
@@ -93,7 +94,8 @@ internal class WCSession(
                 JsonRpcRequest(
                     id = method.requestId,
                     method = method.method,
-                    params = method.params
+                    params = method.params,
+                    jsonrpc = JSONRPC_VERSION
                 ).encodeJson()
             }
 
@@ -106,14 +108,16 @@ internal class WCSession(
                             is WCMethod.Request.Params.Request -> JSON.encodeToJsonElement(it)
                             is WCMethod.Request.Params.Update -> JSON.encodeToJsonElement(it)
                         }
-                    }
+                    },
+                    jsonrpc = JSONRPC_VERSION
                 ).encodeJson()
             }
 
             is WCMethod.Response -> {
                 JsonRpcResponse(
                     id = method.requestId,
-                    result = method.result
+                    result = method.result,
+                    jsonrpc = JSONRPC_VERSION
                 ).encodeJson()
             }
 
