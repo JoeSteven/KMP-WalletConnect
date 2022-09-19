@@ -73,7 +73,7 @@ internal class WCSession(
         }
     }
 
-    suspend fun closeSocket() {
+    fun closeSocket() {
         socket.close()
         isSessionEnd = true
         statusJob?.cancel()

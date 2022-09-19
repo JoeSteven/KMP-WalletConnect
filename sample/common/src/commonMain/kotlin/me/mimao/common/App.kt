@@ -5,12 +5,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ListItem
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import com.mimao.kmp.walletconnect.WCClient
+import com.mimao.kmp.walletconnect.entity.WCMethod
+import com.mimao.kmp.walletconnect.entity.WCMethodType
 import com.mimao.kmp.walletconnect.entity.WCPeerMeta
 import com.mimao.kmp.walletconnect.entity.WCSessionConfig
 import com.mimao.kmp.walletconnect.utils.WCLogger
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -18,6 +23,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun App() {
     WCLogger.switch(true)
@@ -31,13 +37,16 @@ fun App() {
     var uri by remember {
         mutableStateOf("")
     }
+    var connectJob: Job? = remember {
+        null
+    }
     Column {
         Row {
             Button(onClick = {
-                scope.launch {
+                connectJob = scope.launch {
                     wcClient.connect(
                         config = WCSessionConfig(
-                            bridge = "https://safe-walletconnect.gnosis.io",
+                            bridge = "https://bridge.walletconnect.org",
                         ).also {
                             uri = it.uri
                         },
@@ -50,46 +59,76 @@ fun App() {
                     ).onFailure {
                         println("onFailure:$it")
                         uri = it.toString()
-                    }
+                    }.onSuccess {
+                            wcClient.request(
+                                it.id,
+                                method = "personal_sign",
+                                params = Json.encodeToJsonElement(
+                                    listOf(
+                                        "0x48656c6c6f205765623321",
+                                        it.accounts.first(),
+                                    )
+                                ).jsonArray
+                            )
+                        }
                 }
             }) {
                 Text("Connect new session")
             }
-            if (connections.isNotEmpty()) {
+        }
+        ListItem(
+            trailing = {
                 Button(onClick = {
-                    scope.launch {
-                        wcClient.request(
-                            connections.last().id,
-                            method = "personal_sign",
-                            params = Json.encodeToJsonElement(
-                                listOf(
-                                    "0x48656c6c6f2c207765623321",
-                                    connections.last().accounts.first(),
-                                )
-                            ).jsonArray
-                        )
-                    }
+                    connectJob?.cancel()
+                    uri = ""
                 }) {
-                    Text("Sign")
-                }
-                Button(onClick = {
-                    scope.launch {
-                        wcClient.disconnect(
-                            connections.last().id
-                        )
-                    }
-                }) {
-                    Text("Disconnect")
+                    Text("Cancel")
                 }
             }
+        ) {
+            Text(uri)
         }
-        Text(uri)
+
         println(uri)
         LazyColumn {
             items(connections) {
-                Text("connected:$it")
+                ListItem(
+                    trailing = {
+                        Row {
+                            Button(onClick = {
+                                scope.launch {
+                                    wcClient.request(
+                                        connectionId = it.id,
+                                        method = "personal_sign",
+                                        params = Json.encodeToJsonElement(
+                                            listOf(
+                                                "0x48656c6c6f2c207765623321",
+                                                it.accounts.first(),
+                                            )
+                                        ).jsonArray
+                                    )
+                                }
+                            }) {
+                                Text("Sign")
+                            }
+                            Button(onClick = {
+                                scope.launch {
+                                    wcClient.disconnect(it.id)
+                                }
+                            }) {
+                                Text("Disconnect")
+                            }
+                        }
+
+                    }
+                ) {
+                    Text("${it.peerMeta?.name}:${it.peerId}")
+                }
+
+                println(Json.encodeToString(it))
             }
         }
+
     }
 
 }

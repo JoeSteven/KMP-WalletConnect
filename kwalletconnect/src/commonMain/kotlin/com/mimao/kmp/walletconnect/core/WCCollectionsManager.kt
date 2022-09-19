@@ -3,11 +3,8 @@ package com.mimao.kmp.walletconnect.core
 import com.mimao.kmp.walletconnect.WCConnectionPersistStore
 import com.mimao.kmp.walletconnect.entity.*
 import io.ktor.util.collections.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlin.coroutines.CoroutineContext
 
@@ -74,6 +71,20 @@ internal class WCCollectionsManager(
                     ).apply {
                         try {
                             connectSocket()
+                            send(
+                                method = WCMethod.Request(
+                                    id = createCallId(),
+                                    type = WCMethodType.SESSION_UPDATE,
+                                    params = listOf(
+                                        WCMethod.Request.Params.Update(
+                                            approved = true,
+                                            chainId = it.chainId,
+                                            accounts = it.accounts
+                                        )
+                                    )
+                                ),
+                                ignoreResponse = true
+                            )
                         } catch (e: Throwable) {
                             e.printStackTrace()
                         }
