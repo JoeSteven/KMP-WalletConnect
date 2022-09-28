@@ -59,18 +59,7 @@ fun App() {
                     ).onFailure {
                         println("onFailure:$it")
                         uri = it.toString()
-                    }.onSuccess {
-                            wcClient.request(
-                                it.id,
-                                method = "personal_sign",
-                                params = Json.encodeToJsonElement(
-                                    listOf(
-                                        "0x48656c6c6f205765623321",
-                                        it.accounts.first(),
-                                    )
-                                ).jsonArray
-                            )
-                        }
+                    }
                 }
             }) {
                 Text("Connect new session")
@@ -106,7 +95,9 @@ fun App() {
                                                 it.accounts.first(),
                                             )
                                         ).jsonArray
-                                    )
+                                    ).onSuccess {
+                                        println("Sign success:$it")
+                                    }
                                 }
                             }) {
                                 Text("Sign")

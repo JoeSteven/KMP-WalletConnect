@@ -31,7 +31,7 @@ allprojects {
             signAllPublications()
             pom {
                 group = "io.github.joesteven"
-                version = "1.0.2-dev"
+                version = "1.0.3-dev"
                 name.set("kmp-walletconnect")
                 description.set("Video player for Kotlin multiplatform")
                 url.set("https://github.com/JoeSteven/KMP-VideoPlayer/")
