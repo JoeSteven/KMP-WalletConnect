@@ -17,7 +17,7 @@ import kotlinx.serialization.json.*
 internal class WCSession(
     val config: WCSessionConfig,
     private val clientId: String,
-    private var remotePeerId: String? = null
+    private var remotePeerId: String? = null // only server needs remote peerId
 ) {
     private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -51,7 +51,9 @@ internal class WCSession(
         }
     }
 
-    suspend fun connectSocket() {
+    suspend fun connectSocket(
+        handShakeTopic: String? = null
+    ) {
         if (socket.status.value !is KtorSocket.Status.Idle) resetSocket()
         socket.connect()
         while (socket.status.value is KtorSocket.Status.Idle) {
@@ -60,17 +62,29 @@ internal class WCSession(
         val status = socket.status.value
         if (status is KtorSocket.Status.Connected) {
             isSocketConnected = true
-            socket.send(
-                SocketMessage(
-                    topic = clientId,
-                    type = SocketMessage.Type.Sub,
-                    payload = ""
-                ).encodeJson()
-            )
+            handShakeTopic?.let {
+                subMessage(topic = it)
+            }
+            remotePeerId?.let {
+                subMessage(topic = it)
+            }
+            subMessage(topic = clientId)
         } else {
             isSocketConnected = false
             throw if (status is KtorSocket.Status.Error) status.error else Error("WebSocket closed:${config.bridge}")
         }
+    }
+
+    private fun subMessage(
+        topic: String
+    ) {
+        socket.send(
+            SocketMessage(
+                topic = topic,
+                type = SocketMessage.Type.Sub,
+                payload = ""
+            ).encodeJson()
+        )
     }
 
     fun closeSocket() {
@@ -114,14 +128,34 @@ internal class WCSession(
             }
 
             is WCMethod.Response -> {
-                JsonRpcResponse(
-                    id = method.requestId,
-                    result = method.result,
-                    jsonrpc = JSONRPC_VERSION
-                ).encodeJson()
+                when (method.result) {
+                    is JsonElement -> {
+                        JsonRpcResponse(
+                            id = method.requestId,
+                            result = method.result,
+                            jsonrpc = JSONRPC_VERSION
+                        ).encodeJson()
+                    }
+                    else -> {
+                        JsonRpcResponse(
+                            id = method.requestId,
+                            result = method.result.toString(),
+                            jsonrpc = JSONRPC_VERSION
+                        ).encodeJson()
+                    }
+                }
             }
 
-            is WCMethod.Error -> return method
+            is WCMethod.Error -> {
+                JsonRpcErrorResponse(
+                    id = method.id,
+                    jsonrpc = JSONRPC_VERSION,
+                    error = JsonRpcError(
+                        code = method.code,
+                        message = method.error
+                    )
+                ).encodeJson()
+            }
         }
         WCLogger.log("send:$payload")
         val encryptedPayload = WCCipher.encrypt(payload = payload, key = key)
@@ -186,6 +220,9 @@ internal class WCSession(
                             params = request.params.encodeJson().decodeJson<List<WCMethod.Request.Params.Request>>()
                                 .also {
                                     remotePeerId = it.first().peerId
+                                    remotePeerId?.let { topic ->
+                                        subMessage(topic)
+                                    }
                                 }
                         )
                     }

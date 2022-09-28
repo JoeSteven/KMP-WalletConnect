@@ -12,7 +12,7 @@ internal class KtorSocket(
     private val serverUrl: String,
     private val client: HttpClient = httpClient(),
 ) {
-    internal val receive = MutableSharedFlow<String>()
+    internal val receive = MutableSharedFlow<String>(replay = 1)
     internal val status = MutableStateFlow<Status>(Status.Idle)
     private val sendFlow = MutableSharedFlow<String>(replay = 1)
     private var sendRoutine: Job? = null

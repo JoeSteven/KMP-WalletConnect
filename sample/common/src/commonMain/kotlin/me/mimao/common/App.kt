@@ -1,15 +1,14 @@
 package me.mimao.common
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Button
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ListItem
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.mimao.kmp.walletconnect.WCClient
+import com.mimao.kmp.walletconnect.WCServer
 import com.mimao.kmp.walletconnect.entity.WCMethod
 import com.mimao.kmp.walletconnect.entity.WCMethodType
 import com.mimao.kmp.walletconnect.entity.WCPeerMeta
@@ -23,10 +22,121 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun App() {
     WCLogger.switch(true)
+    var uri by remember {
+        mutableStateOf("")
+    }
+    Column(modifier = Modifier.fillMaxSize()) {
+        ClientContent(uri = uri, newUri = {
+            uri = it
+        })
+        Divider(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
+        ServerContent(uri = uri)
+    }
+
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+private fun ColumnScope.ServerContent(uri: String) {
+    val scope = rememberCoroutineScope()
+    val wcServer = remember {
+        WCServer(
+            store = FakeWCConnectionStore(),
+        )
+    }
+    var pairRequest by remember {
+        mutableStateOf<WCServer.PairRequest?>(null)
+    }
+    var error by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var loading by remember {
+        mutableStateOf(false)
+    }
+
+    Column {
+        Text("WalletConnect Server:")
+        Row {
+            Button(onClick = {
+                error = null
+                loading = true
+                scope.launch {
+                    wcServer.pair(
+                        uri = uri,
+                        clientMeta = WCPeerMeta(
+                            name = "Kmp Server",
+                        )
+                    ).onSuccess {
+                        loading = false
+                        pairRequest = it
+                    }.onFailure {
+                        loading = false
+                        error = it.toString()
+                    }
+                }
+            }) {
+                Text("Pair")
+            }
+        }
+        pairRequest?.let {
+            ListItem(
+                modifier = Modifier.fillMaxWidth(),
+                trailing = {
+                    Row {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    it.approve(
+                                        account = listOf("0xD97bBF1e644E9C33A4d7C0e2E54A5B00738e3C36"),
+                                        chainId = 1
+                                    ).onSuccess {
+                                        pairRequest = null
+                                    }.onFailure {
+                                        error = it.toString()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Approve")
+                        }
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    it.reject()
+                                    pairRequest = null
+                                }
+                            }
+                        ) {
+                            Text("Reject")
+                        }
+                    }
+                },
+                secondaryText = {
+                    Text(text = it.peerId)
+                }
+            ) {
+                Text(
+                    text = "${it.peerMeta?.name}",
+                )
+            }
+        }
+
+        error?.let {
+            Text(it)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+private fun ClientContent(
+    uri: String,
+    newUri: (String) -> Unit
+) {
     val wcClient = remember {
         WCClient(
             store = FakeWCConnectionStore(),
@@ -34,21 +144,20 @@ fun App() {
     }
     val scope = rememberCoroutineScope()
     val connections by wcClient.connections.collectAsState(emptyList())
-    var uri by remember {
-        mutableStateOf("")
-    }
+
     var connectJob: Job? = remember {
         null
     }
     Column {
+        Text("WalletConnect Client:")
         Row {
             Button(onClick = {
                 connectJob = scope.launch {
                     wcClient.connect(
                         config = WCSessionConfig(
-                            bridge = "https://bridge.walletconnect.org",
+                            bridge = "https://6.bridge.walletconnect.org",
                         ).also {
-                            uri = it.uri
+                            newUri(it.uri)
                         },
                         clientMeta = WCPeerMeta(
                             name = "Kmp client",
@@ -57,22 +166,24 @@ fun App() {
                             url = "https://github.com/JoeSteven/KMP-WalletConnect"
                         )
                     ).onFailure {
-                        println("onFailure:$it")
-                        uri = it.toString()
+                        newUri(it.toString())
                     }
                 }
             }) {
-                Text("Connect new session")
+                Text("Client new connection")
             }
         }
         ListItem(
             trailing = {
-                Button(onClick = {
-                    connectJob?.cancel()
-                    uri = ""
-                }) {
-                    Text("Cancel")
+                if (uri.isNotEmpty()) {
+                    Button(onClick = {
+                        connectJob?.cancel()
+                        newUri("it")
+                    }) {
+                        Text("Cancel")
+                    }
                 }
+
             }
         ) {
             Text(uri)
@@ -121,5 +232,4 @@ fun App() {
         }
 
     }
-
 }
