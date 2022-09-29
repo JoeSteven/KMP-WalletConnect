@@ -202,7 +202,12 @@ internal class WCSession(
             requestId = decrypted.jsonObject["id"]?.jsonPrimitive?.content?.toLong() ?: return null
             if (result != null) {
                 val requestResponse = try {
-                    JSON.decodeFromJsonElement(WCMethod.Response.RequestResponse.serializer(), result)
+                    JSON.decodeFromJsonElement(WCMethod.Response.RequestResponse.serializer(), result).also {
+                        remotePeerId = it.peerId
+                        remotePeerId?.let { topic ->
+                            subMessage(topic)
+                        }
+                    }
                 } catch (e: Exception) {
                     null
                 }

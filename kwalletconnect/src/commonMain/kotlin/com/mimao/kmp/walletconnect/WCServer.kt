@@ -6,8 +6,10 @@ import com.mimao.kmp.walletconnect.entity.*
 import com.mimao.kmp.walletconnect.utils.JSON
 import com.mimao.kmp.walletconnect.utils.UUID
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.coroutines.CoroutineContext
 
@@ -25,6 +27,12 @@ class WCServer(
     val connections = manager.connections
 
     fun getConnection(connectionId: String) = manager.getConnection(connectionId)
+
+    val request by lazy {
+        manager.message.filter {
+             it.method is WCMethod.CustomRequest
+        }
+    }
 
     class PairRequest(
         val requestId: Long,
@@ -112,5 +120,31 @@ class WCServer(
 
     suspend fun disconnect(connectionId: String) = manager.disconnect(connectionId)
 
-    // TODO response
+    suspend fun response(
+        connectionId: String,
+        requestId: Long,
+        response: JsonElement
+    ) {
+        manager.getSession(connectionId)?.send(
+            method = WCMethod.Response(
+                id = requestId,
+                result = response
+            )
+        )
+    }
+
+    suspend fun errorResponse(
+        connectionId: String,
+        requestId: Long,
+        errorCode: Long,
+        errorMessage: String,
+    ) {
+        manager.getSession(connectionId)?.send(
+            method = WCMethod.Error(
+                id = requestId,
+                code = errorCode,
+                error = errorMessage
+            )
+        )
+    }
 }
