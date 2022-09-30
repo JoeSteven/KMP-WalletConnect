@@ -68,7 +68,59 @@ wcClient.request(
 You can also get specified connection or current connections by `wcClient.getConnection(connectionId)` or `wcClient.connections`
 
 ### WCServer
-working in progress...
+#### 1.create a WCServer instance, better make it a singleton
+```kotlin
+    val wcServer = WCServer(store = YourWCConnectionStore())
+```
+
+#### 2.pair with a WalletConnect uri
+```kotlin
+wcServer.pair(
+    uri = uri,
+    clientMeta = YourClientMeta
+).onSuccess {
+    // display a dialog or something for your user to approve or reject the connection
+    //onSuccess will return a instance of PairRequest, use this instance to approve or reject connection
+}.onFailure {
+    // handle error
+}
+// approve
+pairRequest.approve(
+    account = listOf("0x1234567890...."),// connected wallet address,
+    chainId = 1
+)
+
+// reject
+pairRequest.reject()
+
+// disconnect
+wcServer.disconnect(connectionId)
+```
+#### 3.handle client request and send response
+```kotlin
+
+wcServer.request.collect{    
+    // display a dialog or something for your user to respond to the client request
+    // request contains connectionId and request method
+// you will need connection id and request id to response later
+}
+
+// send response
+wcServer.response(
+    connectionId = request.connectionId,
+    requestId = request.method.requestId,
+    response = response// JsonElement
+)
+
+// send error response
+wcServer.errorResponse(
+    connectionId = request.connectionId,
+    requestId = request.method.requestId,
+    errorCode = -32000,// error code here
+    errorMessage = "error message here"
+)
+
+```
 
 ## Proguard
 ```
