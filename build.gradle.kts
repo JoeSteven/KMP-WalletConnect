@@ -5,11 +5,11 @@ plugins {
     id("com.android.application").apply(false)
     id("com.android.library").apply(false)
     kotlin("android").apply(false)
-    id("com.vanniktech.maven.publish") version "0.21.0" apply false
+    id("com.vanniktech.maven.publish") version "0.25.1" apply false
 }
 
 group = "io.github.joesteven"
-version = "1.0.0"
+version = "1.1.0"
 
 allprojects {
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
@@ -31,7 +31,7 @@ allprojects {
             signAllPublications()
             pom {
                 group = "io.github.joesteven"
-                version = "1.0.0-dev04"
+                version = "1.1.0"
                 name.set("kmp-walletconnect")
                 description.set("Video player for Kotlin multiplatform")
                 url.set("https://github.com/JoeSteven/KMP-VideoPlayer/")
