@@ -2,6 +2,8 @@ package me.mimao.common
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
@@ -9,6 +11,8 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.ListItem
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.mimao.kmp.walletconnect.WCClient
 import com.mimao.kmp.walletconnect.entity.WCMethod
 import com.mimao.kmp.walletconnect.entity.WCPeerMeta
@@ -22,7 +26,8 @@ import kotlinx.serialization.json.jsonArray
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ClientContent(
-    newUri: (String) -> Unit
+    newUri: (String) -> Unit,
+    uri: String,
 ) {
     val wcClient = remember {
         WCClient(
@@ -47,7 +52,7 @@ fun ClientContent(
                 scope.launch {
                     wcClient.connect(
                         config = WCSessionConfig(
-                            bridge = "https://6.bridge.walletconnect.org",
+                            bridge = "https://o.bridge.walletconnect.org",
                         ).also {
                             newUri(it.uri)
                         },
@@ -59,11 +64,15 @@ fun ClientContent(
                         )
                     ).onFailure {
                         newUri(it.toString())
+                    }.onSuccess {
+                        newUri("")
                     }
                 }
             }) {
                 Text("Client new connection")
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            OpenWallet(uri = uri)
         }
 
         signResponse?.let {
@@ -126,3 +135,6 @@ fun ClientContent(
 
     }
 }
+
+@Composable
+expect fun OpenWallet(uri: String)

@@ -51,7 +51,14 @@ class WCClient(
                 )
             ).let {
                 if (it is WCMethod.Error) {
-                    throw Error("code:${it.code} message:${it.error}")
+                    throw WCException(it)
+                }
+                if (it is WCMethod.Request && it.params.firstOrNull() is WCMethod.Request.Params.Update) {
+                    if (!(it.params.first() as WCMethod.Request.Params.Update).approved) throw WCException(WCMethod.Error(
+                        id = it.id,
+                        error = "Session rejected",
+                        code = WCErrorCode.UserReject
+                    ))
                 }
                 val result = (it as WCMethod.Response).result as WCMethod.Response.RequestResponse
                 if (result.approved) {
@@ -71,7 +78,11 @@ class WCClient(
                         )
                     }
                 } else {
-                    throw Error("Session request not approved")
+                    throw WCException(WCMethod.Error(
+                        id = it.id,
+                        error = "Session rejected",
+                        code = WCErrorCode.UserReject
+                    ))
                 }
             }
         }

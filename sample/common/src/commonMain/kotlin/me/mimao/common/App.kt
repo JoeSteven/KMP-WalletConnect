@@ -30,9 +30,12 @@ fun App() {
         Text(uri)
         Spacer(modifier = Modifier.height(8.dp))
         println(uri)
-        ClientContent( newUri = {
-            uri = it
-        })
+        ClientContent(
+            newUri = {
+                uri = it
+            },
+            uri = uri
+        )
         Divider(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
         ServerContent(uri = uri)
     }
