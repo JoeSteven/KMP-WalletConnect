@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.github.joesteven"
-version = "1.1.0"
+version = "1.1.1"
 
 allprojects {
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {

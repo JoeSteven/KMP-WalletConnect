@@ -62,13 +62,17 @@ internal class WCSession(
         val status = socket.status.value
         if (status is KtorSocket.Status.Connected) {
             isSocketConnected = true
+            // subMessage(topic = config.topic)
             handShakeTopic?.let {
                 subMessage(topic = it)
             }
+
+            subMessage(topic = clientId)
+
             remotePeerId?.let {
                 subMessage(topic = it)
             }
-            subMessage(topic = clientId)
+
         } else {
             isSocketConnected = false
             throw if (status is KtorSocket.Status.Error) status.error else Error("WebSocket closed:${config.bridge}")
@@ -78,13 +82,15 @@ internal class WCSession(
     private fun subMessage(
         topic: String
     ) {
-        socket.send(
-            SocketMessage(
-                topic = topic,
-                type = SocketMessage.Type.Sub,
-                payload = ""
-            ).encodeJson()
-        )
+        scope.launch {
+            socket.send(
+                SocketMessage(
+                    topic = topic,
+                    type = SocketMessage.Type.Sub,
+                    payload = ""
+                ).encodeJson()
+            )
+        }
     }
 
     fun closeSocket() {

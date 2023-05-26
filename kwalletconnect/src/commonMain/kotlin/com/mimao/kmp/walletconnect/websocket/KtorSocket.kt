@@ -71,7 +71,7 @@ internal class KtorSocket(
         WCLogger.log("websocket closed:$serverUrl")
     }
 
-    fun send(message: String) {
-        sendFlow.tryEmit(message)
+    suspend fun send(message: String) {
+        sendFlow.emit(message)
     }
 }
