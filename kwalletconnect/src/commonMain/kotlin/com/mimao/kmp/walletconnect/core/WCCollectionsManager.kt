@@ -76,31 +76,34 @@ internal class WCCollectionsManager(
                         config = it.config,
                         remotePeerId = it.peerId,
                         clientId = it.clientId
-                    ).apply {
-                        try {
-                            connectSocket()
-                            send(
-                                method = WCMethod.Request(
-                                    id = createCallId(),
-                                    type = WCMethodType.SESSION_UPDATE,
-                                    params = listOf(
-                                        WCMethod.Request.Params.Update(
-                                            approved = true,
-                                            chainId = it.chainId,
-                                            accounts = it.accounts
-                                        )
-                                    )
-                                ),
-                                ignoreResponse = true
-                            )
-                        } catch (e: Throwable) {
-                            e.printStackTrace()
-                        }
-                    })
+                    ))
                 }
 
             }
             initialize.emit(true)
+            _connections.firstOrNull()?.forEach {
+                it.value.second.apply {
+                    try {
+                        connectSocket()
+                        send(
+                            method = WCMethod.Request(
+                                id = createCallId(),
+                                type = WCMethodType.SESSION_UPDATE,
+                                params = listOf(
+                                    WCMethod.Request.Params.Update(
+                                        approved = true,
+                                        chainId = it.value.first.chainId,
+                                        accounts = it.value.first.accounts
+                                    )
+                                )
+                            ),
+                            ignoreResponse = true
+                        )
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
+                    }
+                }
+            }
         }
     }
 
