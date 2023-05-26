@@ -20,7 +20,7 @@ internal class WCCollectionsManager(
 
     private suspend fun MutableSharedFlow<MutableMap<String, Pair<WCConnection, WCSession>>>.update(block: suspend (MutableMap<String, Pair<WCConnection, WCSession>>) -> Unit) {
         block(_connectionMap)
-        tryEmit(_connectionMap)
+        emit(_connectionMap)
     }
 
     val message: Flow<WCMessage> by lazy {
@@ -43,8 +43,16 @@ internal class WCCollectionsManager(
             pair.first
         }.toList()
     }
+    private val initialize = MutableSharedFlow<Boolean>(replay = 1)
+        .apply {
+            tryEmit(false)
+        }
 
-    fun getConnection(connectionId: String) = _connectionMap[connectionId]?.first
+    fun getConnection(connectionId: String) = initialize.filter { it }.flatMapLatest {
+        _connections
+    }.map {
+        it[connectionId]?.first
+    }
 
     fun getSession(connectionId: String) = _connectionMap[connectionId]?.second
 
@@ -90,7 +98,9 @@ internal class WCCollectionsManager(
                         }
                     })
                 }
+
             }
+            initialize.emit(true)
         }
     }
 
