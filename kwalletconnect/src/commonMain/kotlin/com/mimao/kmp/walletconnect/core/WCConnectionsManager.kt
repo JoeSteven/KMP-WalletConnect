@@ -9,7 +9,7 @@ import kotlinx.datetime.Clock
 import kotlin.coroutines.CoroutineContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class WCCollectionsManager(
+internal class WCConnectionsManager(
     private val store: WCConnectionPersistStore,
     coroutineContext: CoroutineContext = Dispatchers.Default
 ) {

@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.github.joesteven"
-version = "1.1.2"
+version = "1.1.3"
 
 allprojects {
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
@@ -31,7 +31,7 @@ allprojects {
             signAllPublications()
             pom {
                 group = "io.github.joesteven"
-                version = "1.1.2"
+                version = "1.1.3"
                 name.set("kmp-walletconnect")
                 description.set("Video player for Kotlin multiplatform")
                 url.set("https://github.com/JoeSteven/KMP-VideoPlayer/")

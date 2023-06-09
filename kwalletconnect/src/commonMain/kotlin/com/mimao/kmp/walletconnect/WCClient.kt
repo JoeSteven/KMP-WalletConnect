@@ -1,6 +1,6 @@
 package com.mimao.kmp.walletconnect
 
-import com.mimao.kmp.walletconnect.core.WCCollectionsManager
+import com.mimao.kmp.walletconnect.core.WCConnectionsManager
 import com.mimao.kmp.walletconnect.core.WCSession
 import com.mimao.kmp.walletconnect.entity.*
 import com.mimao.kmp.walletconnect.utils.UUID
@@ -14,7 +14,7 @@ class WCClient(
 ) {
 
     private val manager by lazy {
-        WCCollectionsManager(
+        WCConnectionsManager(
             store = store,
             coroutineContext = coroutineContext
         )

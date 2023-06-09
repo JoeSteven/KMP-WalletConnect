@@ -18,6 +18,7 @@ import com.mimao.kmp.walletconnect.entity.WCMethod
 import com.mimao.kmp.walletconnect.entity.WCPeerMeta
 import com.mimao.kmp.walletconnect.entity.WCSessionConfig
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
@@ -65,6 +66,7 @@ fun ClientContent(
                     ).onFailure {
                         newUri(it.toString())
                     }.onSuccess {
+                        println(Json.encodeToString(it))
                         newUri("")
                     }
                 }

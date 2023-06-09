@@ -69,10 +69,6 @@ internal class WCSession(
 
             subMessage(topic = clientId)
 
-            remotePeerId?.let {
-                subMessage(topic = it)
-            }
-
         } else {
             isSocketConnected = false
             throw if (status is KtorSocket.Status.Error) status.error else Error("WebSocket closed:${config.bridge}")
@@ -210,9 +206,9 @@ internal class WCSession(
                 val requestResponse = try {
                     JSON.decodeFromJsonElement(WCMethod.Response.RequestResponse.serializer(), result).also {
                         remotePeerId = it.peerId
-                        remotePeerId?.let { topic ->
-                            subMessage(topic)
-                        }
+                        // remotePeerId?.let { topic ->
+                        //     subMessage(topic)
+                        // }
                     }
                 } catch (e: Exception) {
                     null
@@ -231,9 +227,9 @@ internal class WCSession(
                             params = request.params.encodeJson().decodeJson<List<WCMethod.Request.Params.Request>>()
                                 .also {
                                     remotePeerId = it.first().peerId
-                                    remotePeerId?.let { topic ->
-                                        subMessage(topic)
-                                    }
+                                    // remotePeerId?.let { topic ->
+                                    //     subMessage(topic)
+                                    // }
                                 }
                         )
                     }
